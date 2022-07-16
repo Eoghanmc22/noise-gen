@@ -18,25 +18,26 @@ public class NoiseLerp3D implements Noise3D {
     private final int cellSizeXYZ;
 
     public NoiseLerp3D(@NotNull Noise3D noiseMap, @NotNull Point position, int cellsXYZ) {
-        Check.argCondition(Chunk.CHUNK_SIZE_X % cellsXYZ == 0, "Chunk size must be divisible by cellsXYZ");
+        Check.argCondition(Chunk.CHUNK_SIZE_X % cellsXYZ != 0, "Chunk size must be divisible by cellsXYZ");
 
-        this.position = position;
-        this.cellsXYZ = cellsXYZ + 1;
         this.cellSizeXYZ = Chunk.CHUNK_SIZE_X / cellsXYZ;
+        this.cellsXYZ = cellsXYZ + 1; // (cellsXYZ + 1) is needed to correctly interpolate noise on the positive edges of a chunk
+        this.position = position;
+
         this.noiseCache = new float[this.cellsXYZ * this.cellsXYZ * this.cellsXYZ];
 
         fill(noiseMap);
     }
 
     private int getIdx(int cellX, int cellY, int cellZ) {
-        Check.argCondition(withinCache(cellX, cellY, cellZ, this.cellsXYZ), "Attempted to get noise cell outside of cache");
+        Check.argCondition(!withinCache(cellX, cellY, cellZ, this.cellsXYZ), "Attempted to get noise cell outside of cache");
         return cellX * this.cellsXYZ * this.cellsXYZ + cellZ * this.cellsXYZ + cellY;
     }
 
     private void fill(Noise3D noiseMap) {
         double x = position.x();
-        double y = position.x();
-        double z = position.x();
+        double y = position.y();
+        double z = position.z();
 
         for (int cellX = 0; cellX < cellsXYZ; cellX++) {
             for (int cellZ = 0; cellZ < cellsXYZ; cellZ++) {
@@ -53,7 +54,7 @@ public class NoiseLerp3D implements Noise3D {
 
     @Override
     public float get(double x, double y, double z) {
-        Check.argCondition(sameSection(this.position, x, y, z), "Attempted to evaluate noise outside of section");
+        //Check.argCondition(sameSection(this.position, x, y, z), "Attempted to evaluate noise outside of section");
 
         double relX = x - this.position.x();
         double relY = y - this.position.y();
