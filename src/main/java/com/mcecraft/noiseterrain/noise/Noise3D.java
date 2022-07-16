@@ -66,13 +66,36 @@ public interface Noise3D {
         return (x, y, z) -> noise1.get(x, y, z) + noise2.get(x, y, z);
     }
 
-    static Noise2D surface(@NotNull Noise3D noise, @NotNull Noise2D offset) {
-        return (x, z) -> noise.get(x, offset.get(x, z), z);
+    static Noise3D choose(@NotNull Noise3D selector, float rangeMin, float rangeMax, @NotNull Noise3D inRange, @NotNull Noise3D outOfRange) {
+        return (x, y, z) -> {
+            float s = selector.get(x, y, z);
+            return s >= rangeMin && s < rangeMax ? inRange.get(x, y, z) : outOfRange.get(x, y, z);
+        };
+    }
+
+    static Noise3D map(@NotNull Noise3D noise, float inMin, float inMax, float outMin, float outMax) {
+        return (x, y, z) -> MathUtils.map(noise.get(x, y, z), inMin, inMax, outMin, outMax);
+    }
+
+    static Noise3D surface(@NotNull Noise3D noise, @NotNull Noise3D offset) {
+        return (x, y, z) -> noise.get(x, offset.get(x, 0, z), z);
+    }
+
+    static Noise3D distort(@NotNull Noise3D noise, @NotNull Noise3D distort) {
+        return (x, y, z) -> noise.get(x + distort.get(x, y, z), y, z + distort.get(z, y, x));
     }
 
 
     static Noise3D noise(@NotNull FastNoiseLite noise) {
         return noise::getNoise;
+    }
+
+    static Noise3D noise(@NotNull FastNoiseLite noise, @NotNull FastNoiseLite turbulence) {
+        return (x, y, z) -> {
+            FastNoiseLite.Vector3 coord = new FastNoiseLite.Vector3(x, y, z);
+            turbulence.domainWarp(coord);
+            return noise.getNoise(coord.x, coord.y, coord.z);
+        };
     }
 
     static Noise3D clampedGradient(double startY, double endY, double startVal, double endVal) {
